@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Cyberbeest Setup
+Exec=xfce4-terminal --title "Cyberbeest Setup" --hold -e "/home/cyberbeest/cyberbeest-bootstrap.sh"
+X-GNOME-Autostart-enabled=true
+NoDisplay=false

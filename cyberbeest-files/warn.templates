@@ -1,0 +1,8 @@
+Template: cyberbeest/erase-warning
+Type: note
+Description: WARNING: THIS WILL ERASE THE DISK
+ This will COMPLETELY ERASE all data on this machine's disk and install
+ Cyberbeest from scratch. There is NO UNDO.
+ .
+ Press Continue to proceed. You will still get partman's own confirmation
+ screen(s) before anything is actually written.
