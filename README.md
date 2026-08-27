@@ -1,4 +1,4 @@
-# installer-usb
+# usb-stick-maker
 
 Builds an unattended-install Cyberbeest USB/DVD image from a stock Debian 13
 (trixie) amd64 netinst ISO: a preseed file plus a small first-boot bootstrap
