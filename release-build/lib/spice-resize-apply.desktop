@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=SPICE resize apply workaround
+Comment=Applies the display mode spice-vdagent negotiates but doesn't switch to on XFCE/X11
+Exec=/home/cyberbeest/.local/bin/spice-resize-apply.sh
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
