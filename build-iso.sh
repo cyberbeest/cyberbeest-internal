@@ -5,11 +5,13 @@
 # that auto-selects the preseeded install after a short timeout, for both
 # BIOS (isolinux) and UEFI (grub) boot paths.
 #
-# Usage: ./build-iso.sh /path/to/debian-13.x.x-amd64-netinst.iso [output.iso]
+# Usage: ./build-iso.sh [/path/to/debian-13.x.x-amd64-netinst.iso] [output.iso]
 #
-# Grab the source ISO yourself from https://www.debian.org/CD/netinst/ (or
-# copy one over from another machine) -- this script doesn't fetch it, since
-# doing so reliably means tracking Debian's current point release.
+# If the source ISO is omitted, or the given path doesn't exist yet, the
+# current Debian 13 (trixie) amd64 netinst ISO is downloaded from Debian's
+# cdimage mirror (verified against the published SHA256SUMS) and cached at
+# that path -- or at $DIR/debian-13-amd64-netinst.iso if no path was given --
+# for reuse on later runs.
 #
 # Needs xorriso. Does not touch any USB device -- it only produces an .iso
 # file; write it to a stick yourself once you're happy with it, e.g.:
@@ -17,12 +19,36 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-SRC_ISO="${1:?Usage: $0 /path/to/debian-13.x.x-amd64-netinst.iso [output.iso]}"
+DEBIAN_ISO_BASE_URL="https://cdimage.debian.org/debian-cd/current/amd64/iso-cd"
+
+SRC_ISO="${1:-$DIR/debian-13-amd64-netinst.iso}"
 OUT_ISO="${2:-$DIR/cyberbeest-13-amd64.iso}"
 
 if [ ! -f "$SRC_ISO" ]; then
-	echo "Source ISO not found: $SRC_ISO" >&2
-	exit 1
+	echo "Source ISO not found at $SRC_ISO -- downloading current Debian 13 netinst ISO..."
+
+	ISO_NAME="$(curl -fsSL "$DEBIAN_ISO_BASE_URL/SHA256SUMS" | awk '$2 ~ /^debian-[0-9][^-]*-amd64-netinst\.iso$/ {print $2}' | head -n1)"
+	if [ -z "$ISO_NAME" ]; then
+		echo "Couldn't find a netinst ISO listed in $DEBIAN_ISO_BASE_URL/SHA256SUMS" >&2
+		exit 1
+	fi
+
+	DL_TMP="$(mktemp)"
+	trap 'rm -f "$DL_TMP"' EXIT
+	curl -fSL --progress-bar "$DEBIAN_ISO_BASE_URL/$ISO_NAME" -o "$DL_TMP"
+
+	echo "Verifying checksum..."
+	EXPECTED_SUM="$(curl -fsSL "$DEBIAN_ISO_BASE_URL/SHA256SUMS" | awk -v f="$ISO_NAME" '$2 == f {print $1}')"
+	ACTUAL_SUM="$(sha256sum "$DL_TMP" | awk '{print $1}')"
+	if [ "$EXPECTED_SUM" != "$ACTUAL_SUM" ]; then
+		echo "Checksum mismatch for $ISO_NAME: expected $EXPECTED_SUM, got $ACTUAL_SUM" >&2
+		exit 1
+	fi
+
+	mkdir -p "$(dirname "$SRC_ISO")"
+	mv "$DL_TMP" "$SRC_ISO"
+	trap - EXIT
+	echo "Downloaded and verified: $SRC_ISO"
 fi
 
 if ! command -v xorriso >/dev/null 2>&1; then
