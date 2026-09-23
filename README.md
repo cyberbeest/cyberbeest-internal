@@ -1,4 +1,10 @@
-# usb-stick-maker
+# cyberbeest-tools
+
+Public build and test tooling for Cyberbeest: the install/live stick and
+VM image builders (this README's main topic, plus `release-build/`) and
+the pentest tools in `tools/`.
+
+## Install stick
 
 Builds an unattended-install Cyberbeest USB/DVD image from a stock Debian 13
 (trixie) amd64 netinst ISO: a preseed file plus a small first-boot bootstrap
