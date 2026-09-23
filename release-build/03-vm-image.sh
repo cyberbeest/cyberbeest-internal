@@ -39,6 +39,19 @@ echo "--- Cleaning build-only cruft from the copy ---"
 # those since a live-stick boots via live-boot/squashfs+overlay, not its
 # own real disk -- this VM image boots its own real attached qcow2
 # normally, so real fstab/crypttab entries are exactly what it needs).
+# Also strips /etc/cyberbeest/dev-test-vm-marker (provisioning/lib/mark-
+# dev-test-vm.sh) defensively: $SRC comes from a fresh 02-provision.sh run
+# and should never actually have it, but if a donor image were ever reused
+# by mistake, this is the last line of defense against dev-rig overrides
+# (autologin, no lock screen -- see 90-vm-mode-overrides.sh) leaking into
+# an actual customer build.
+# Also strips the build network's apt-cacher-ng proxy setting
+# (Acquire::http::Proxy) baked into /etc/apt/apt.conf by debian-installer's
+# mirror/http/proxy preseed value at base-install time -- unreachable from
+# outside tower's network, so every apt operation on a real customer machine
+# would fail until this is stripped. Found 2026-09-20, same category as the
+# dev-test-vm-marker strip above: build-only state that must never reach a
+# shipped artifact.
 virt-customize -a "$TMP" \
 	--run-command 'truncate -s 0 /etc/machine-id' \
 	--run-command 'rm -f /var/lib/dbus/machine-id' \
@@ -48,7 +61,22 @@ virt-customize -a "$TMP" \
 	--run-command 'rm -rf /var/log/* /var/cache/apt/archives/*.deb' \
 	--run-command 'rm -f /root/.bash_history /home/*/.bash_history' \
 	--run-command 'rm -rf /var/spool/cron/crontabs/* /var/mail/* /var/spool/mail/*' \
-	--run-command 'rm -rf /home/*/.cache /root/.cache'
+	--run-command 'rm -rf /home/*/.cache /root/.cache' \
+	--run-command 'rm -f /etc/cyberbeest/dev-test-vm-marker' \
+	--run-command 'sed -i "/Acquire::http::Proxy/d" /etc/apt/apt.conf 2>/dev/null || true'
+
+echo "--- Stripping passwordless-root build scaffolding ---"
+# 99-build-nopasswd comes from build-preseed.cfg (unconditional, needed so
+# the pipeline can provision unattended over SSH -- see
+# cyberbeest_vm_release_build_passwordless_root memory). Never meant to
+# survive into a shipped image: without it, any code execution as
+# cyberbeest (e.g. a browser exploit) is instant, silent root. Leaving
+# LightDM autologin + the "virtual" password alone -- those are the
+# intentional VM-product convenience tradeoff, decided 2026-09-23. This
+# just restores the normal sudo password prompt (asks for "virtual", same
+# as a real install) once inside the desktop.
+virt-customize -a "$TMP" \
+	--run-command 'rm -f /etc/sudoers.d/99-build-nopasswd /etc/sudoers.d/90-vm-nopasswd'
 
 echo "--- Setting the VM-product-specific login password ---"
 # build-preseed.cfg installs everyone (this copy and 04-remaster.sh's

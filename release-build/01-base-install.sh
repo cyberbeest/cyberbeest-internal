@@ -61,6 +61,7 @@ virt-install \
 	--disk "path=$BASE_QCOW2,format=qcow2,bus=virtio,discard=unmap" \
 	--network network=default,model=virtio \
 	--os-variant debian12 \
+	--boot uefi \
 	--location "$NETINST_ISO" \
 	--initrd-inject "$DIR/build-preseed.cfg" \
 	--initrd-inject "$SSH_KEY.pub" \

@@ -65,6 +65,7 @@ virt-install \
 	--disk "path=$PROVISIONED_QCOW2,format=qcow2,bus=virtio,discard=unmap" \
 	--network network=default,model=virtio \
 	--os-variant debian12 \
+	--boot uefi \
 	--import \
 	--graphics spice,listen=127.0.0.1 \
 	--video qxl \
@@ -89,6 +90,11 @@ echo "--- Cloning provisioning ($PROVISIONING_BRANCH) into the guest ---"
 rb_ssh "$IP" "rm -rf ~/provisioning && git clone --branch '$PROVISIONING_BRANCH' --depth 1 '$PROVISIONING_REPO' ~/provisioning"
 
 echo "--- Writing .provisioning-profile.env (locale=$LOCALE_CODE) ---"
+# PROVISIONING_VM_IMAGE=no: skips script 56 (sandbox-VM download+register)
+# entirely. Registering it here would need to boot a VM inside this
+# already-nested build VM, which reliably fails (cgroup-delegation issue,
+# unresolved) -- see cyberbeest_release_build_pipeline memory. The donor
+# VM stays a follow-up; this run just gets the base product up to date.
 rb_ssh "$IP" "cat > ~/provisioning/.provisioning-profile.env" <<-EOF
 	PROVISIONING_PROFILE=1
 	PROVISIONING_COUNTRY=$COUNTRY
@@ -98,7 +104,7 @@ rb_ssh "$IP" "cat > ~/provisioning/.provisioning-profile.env" <<-EOF
 	PROVISIONING_MENU_KEY_REMAP=no
 	PROVISIONING_TIMEZONE=$TIMEZONE
 	PROVISIONING_TOUCHPAD_TUNING=no
-	PROVISIONING_VM_IMAGE=yes
+	PROVISIONING_VM_IMAGE=no
 EOF
 
 echo "--- Running every NN-*.sh in order ---"
