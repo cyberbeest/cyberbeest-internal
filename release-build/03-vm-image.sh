@@ -52,18 +52,36 @@ echo "--- Cleaning build-only cruft from the copy ---"
 # would fail until this is stripped. Found 2026-09-20, same category as the
 # dev-test-vm-marker strip above: build-only state that must never reach a
 # shipped artifact.
+# /var/log: only the files go, not the directories -- the old
+# `rm -rf /var/log/*` also deleted e.g. /var/log/exim4, after which exim4
+# failed at every boot of the image (on the boot's critical chain, and
+# leaving the system "degraded"). Found 2026-09-25.
 virt-customize -a "$TMP" \
 	--run-command 'truncate -s 0 /etc/machine-id' \
 	--run-command 'rm -f /var/lib/dbus/machine-id' \
 	--run-command 'rm -f /etc/ssh/ssh_host_*' \
 	--run-command 'rm -rf /root/.ssh /home/*/.ssh' \
 	--run-command 'rm -f /etc/NetworkManager/system-connections/*' \
-	--run-command 'rm -rf /var/log/* /var/cache/apt/archives/*.deb' \
+	--run-command 'find /var/log -type f -delete' \
+	--run-command 'rm -f /var/cache/apt/archives/*.deb' \
 	--run-command 'rm -f /root/.bash_history /home/*/.bash_history' \
 	--run-command 'rm -rf /var/spool/cron/crontabs/* /var/mail/* /var/spool/mail/*' \
 	--run-command 'rm -rf /home/*/.cache /root/.cache' \
 	--run-command 'rm -f /etc/cyberbeest/dev-test-vm-marker' \
 	--run-command 'sed -i "/Acquire::http::Proxy/d" /etc/apt/apt.conf 2>/dev/null || true'
+
+echo "--- Hostname and GRUB for a normal VM ---"
+# The base install gets hostname "cyberbeest-build" (build-preseed.cfg) and,
+# because the installer runs on a serial console (console=ttyS0 in
+# 01-base-install.sh), a GRUB set to that serial console at 9600 baud -- a
+# port nobody reads on a customer's VM. Its 1-second menu timeout is pure
+# delay too, with the menu hidden anyway. Both found 2026-09-25 while
+# profiling the sandbox VM's boot. The live sticks (04-) are built from
+# $SRC, not this copy, and are unaffected.
+virt-customize -a "$TMP" \
+	--hostname cyberbeest-vm \
+	--run-command 'sed -i -e "s/^GRUB_TERMINAL=serial$/GRUB_TERMINAL=console/" -e "/^GRUB_SERIAL_COMMAND=/d" -e "s/^GRUB_TIMEOUT=[0-9]*$/GRUB_TIMEOUT=0/" /etc/default/grub' \
+	--run-command 'update-grub'
 
 echo "--- Stripping passwordless-root build scaffolding ---"
 # 99-build-nopasswd comes from build-preseed.cfg (unconditional, needed so
