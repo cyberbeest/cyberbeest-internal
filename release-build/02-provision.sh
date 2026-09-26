@@ -49,7 +49,7 @@ rb_ensure_ssh_key
 if virsh dominfo "$VM_NAME" >/dev/null 2>&1; then
 	echo "--- A stale '$VM_NAME' domain already exists -- undefining it (disk file is recreated below) ---"
 	virsh destroy "$VM_NAME" >/dev/null 2>&1 || true
-	virsh undefine "$VM_NAME" >/dev/null 2>&1 || true
+	virsh undefine "$VM_NAME" --nvram >/dev/null 2>&1 || virsh undefine "$VM_NAME" >/dev/null 2>&1 || true
 fi
 
 mkdir -p "$LOCALE_DIR"

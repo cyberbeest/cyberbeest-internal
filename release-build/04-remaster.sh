@@ -49,7 +49,7 @@ rb_ensure_default_network
 echo "--- Booting $VM_NAME from its already-provisioned disk ---"
 if virsh dominfo "$VM_NAME" >/dev/null 2>&1; then
 	virsh destroy "$VM_NAME" >/dev/null 2>&1 || true
-	virsh undefine "$VM_NAME" >/dev/null 2>&1 || true
+	virsh undefine "$VM_NAME" --nvram >/dev/null 2>&1 || virsh undefine "$VM_NAME" >/dev/null 2>&1 || true
 fi
 virt-install \
 	--name "$VM_NAME" \
@@ -113,7 +113,7 @@ rb_scp_from "$IP" "/home/$BUILD_USER/cyberbeest-live-remastered-amd64.iso" "$OUT
 
 echo "--- Shutting down and discarding the provisioned VM disk ---"
 rb_shutdown_and_wait "$VM_NAME"
-virsh undefine "$VM_NAME" >/dev/null 2>&1 || true
+virsh undefine "$VM_NAME" --nvram >/dev/null 2>&1 || virsh undefine "$VM_NAME" >/dev/null 2>&1 || true
 rm -f "$PROVISIONED_QCOW2"
 
 rb_mark_done "$STAGE"
